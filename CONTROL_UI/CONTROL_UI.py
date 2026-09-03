@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+
 # 1. Initialize the main application window
 root = tk.Tk()
 root.tk.call('tk', 'scaling', 2.5)
