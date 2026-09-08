@@ -10,9 +10,35 @@ ROOT.title("Tkinter Tabs Example")
 ROOT.attributes('-fullscreen', True)
 
 
-# Configure style for consistent look
 STYLE = ttk.Style()
 STYLE.configure('TNotebook.Tab', font=('Arial', 12, 'bold'))
+
+# ===== ADD COLOR STYLES FOR WHEEL BUTTONS =====
+# Default style (for initialization)
+STYLE.configure('Wheel.TButton', font=('Arial', 12, 'bold'))
+
+# S = Dark Gray
+STYLE.configure('S.TButton',
+                background='#4a4a4a',
+                foreground='white',
+                font=('Arial', 12, 'bold'))
+STYLE.map('S.TButton',
+          background=[('active', '#5a5a5a')])
+
+STYLE.configure('D.TButton',
+                background='#ff6b6b',
+                foreground='white',
+                font=('Arial', 12, 'bold'))
+STYLE.map('D.TButton',
+          background=[('active', '#ff5252')])
+
+# W = Light Yellow
+STYLE.configure('W.TButton',
+                background='#fffacd',
+                foreground='black',
+                font=('Arial', 12, 'bold'))
+STYLE.map('W.TButton',
+          background=[('active', '#fff59d')])
 
 
 DARK_MODE = False
@@ -164,6 +190,8 @@ def INIT__DISTANCE_RECIVER():
 
 def GET__DISTANCE_SERIAL_LINE() -> str:
 
+        global SERIAL
+
 
         LINE = "";
 
@@ -201,6 +229,12 @@ def UPDATE__DISTANCE_BUTTONS():
         print(SERIAL_LINE);
 
 
+        UPDATE_BUTTON_COLOR(WHEEL_LF, SERIAL_LINE[0]);
+        UPDATE_BUTTON_COLOR(WHEEL_RF, SERIAL_LINE[3]);
+        UPDATE_BUTTON_COLOR(WHEEL_LB, SERIAL_LINE[1]);
+        UPDATE_BUTTON_COLOR(WHEEL_RB, SERIAL_LINE[2]);
+
+
         WHEEL_LF.config(text=SERIAL_LINE[0]);
         WHEEL_RF.config(text=SERIAL_LINE[3]);
         WHEEL_LB.config(text=SERIAL_LINE[1]);
@@ -208,6 +242,18 @@ def UPDATE__DISTANCE_BUTTONS():
 
 
         ROOT.after(10, UPDATE__DISTANCE_BUTTONS);
+
+
+
+
+def UPDATE_BUTTON_COLOR(button, char):
+
+        if char == 'S':
+                button.configure(style='S.TButton')  # Dark gray
+        elif char == 'W':
+                button.configure(style='W.TButton')  # Light yellow
+        elif char == 'D':
+                button.configure(style='D.TButton')  # Light red
 
 
 INIT_TK();
