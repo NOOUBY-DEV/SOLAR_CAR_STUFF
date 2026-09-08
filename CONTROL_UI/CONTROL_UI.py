@@ -1,4 +1,3 @@
-from msvcrt import SEM_FAILCRITICALERRORS
 import time, queue, tkinter, serial, random
 import tkinter as tk
 from tkinter import ttk
