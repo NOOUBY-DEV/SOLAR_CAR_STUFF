@@ -1,3 +1,4 @@
+from msvcrt import SEM_FAILCRITICALERRORS
 import time, queue, tkinter, serial, random
 import tkinter as tk
 from tkinter import ttk
@@ -134,7 +135,7 @@ def INIT_TK():
         MUSIC_LABEL.pack(padx=20, pady=30)
 
         # Call dark mode function at the bottom
-        TOGGLE_DARKMODE()
+        TOGGLE_DARKMODE();
 
 
         INIT__DISTANCE_RECIVER();
@@ -148,12 +149,16 @@ def INIT_TK():
 
 
 
+
 def INIT__DISTANCE_RECIVER():
+
+        global SERIAL
+
 
         QUEUE = queue.Queue();
 
 
-        # TODO : ADD ACTUAL SERIAL LATER (/dev/ttyAMC0)
+        SERIAL = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
 
 
 
@@ -162,15 +167,28 @@ def GET__DISTANCE_SERIAL_LINE() -> str:
 
 
         LINE = "";
-        ALLOWED_DISTANCES = ['S', 'W', 'D'];
 
 
-        for _ in range(4):
-
-                LINE += random.choice(ALLOWED_DISTANCES);
+        # ALLOWED_DISTANCES = ['S', 'W', 'D'];
 
 
-        return LINE
+        # for _ in range(4):
+
+        #         LINE += random.choice(ALLOWED_DISTANCES);
+
+
+        while SERIAL.in_waiting <= 0:
+
+                pass
+
+
+        LINE = SERIAL.readline().decode('utf-8').rstrip()
+
+
+        print(LINE)
+
+
+        return LINE;
 
 
 
