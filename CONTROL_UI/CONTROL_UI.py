@@ -157,7 +157,7 @@ def INIT__DISTANCE_RECIVER():
         QUEUE = queue.Queue();
 
 
-        SERIAL = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+        SERIAL = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
 
 
 
@@ -207,7 +207,7 @@ def UPDATE__DISTANCE_BUTTONS():
         WHEEL_RB.config(text=SERIAL_LINE[2]);
 
 
-        ROOT.after(100, UPDATE__DISTANCE_BUTTONS);
+        ROOT.after(10, UPDATE__DISTANCE_BUTTONS);
 
 
 INIT_TK();
