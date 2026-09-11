@@ -1,45 +1,25 @@
-import time, queue, tkinter, serial, random
+import queue
+import random
+from sys import int_info
 import tkinter as tk
 from tkinter import ttk
+import serial
+import os
+import subprocess
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+import pygame
 
-ROOT :tk.Tk = tk.Tk()
-ROOT.tk.call('tk', 'scaling', 2.5)
-ROOT.title("Tkinter Tabs Example")
-ROOT.attributes('-fullscreen', True)
 
-STYLE = ttk.Style()
-STYLE.configure('TNotebook.Tab', font=('Arial', 12, 'bold'))
 
-# ===== ADD COLOR STYLES FOR WHEEL BUTTONS =====
-STYLE.configure('Wheel.TButton', font=('Arial', 12, 'bold'))
+ROOT :tk.Tk = tk.Tk();
+ROOT.tk.call('tk', 'scaling', 2.5);
+ROOT.title("Tkinter Tabs Example");
+ROOT.attributes('-fullscreen', True);
 
-# S = Dark Gray
-STYLE.configure('S.TButton',
-                background='#4a4a4a',
-                foreground='white',
-                font=('Arial', 12, 'bold'))
-STYLE.map('S.TButton',
-          background=[('active', '#5a5a5a')])
 
-STYLE.configure('D.TButton',
-                background='#ff6b6b',
-                foreground='white',
-                font=('Arial', 12, 'bold'))
-STYLE.map('D.TButton',
-          background=[('active', '#ff5252')])
-
-# W = Light Yellow
-STYLE.configure('W.TButton',
-                background='#fffacd',
-                foreground='black',
-                font=('Arial', 12, 'bold'))
-STYLE.map('W.TButton',
-          background=[('active', '#fff59d')])
-
-DARK_MODE = False
-
+STYLE :ttk.Style = ttk.Style();
 QUEUE :queue.Queue;
-
 NOTEBOOK : ttk.Notebook;
 CAR_TAB : ttk.Frame;
 MUSIC_TAB : ttk.Frame;
@@ -49,25 +29,40 @@ WHEEL_LF : ttk.Button;
 WHEEL_LB : ttk.Button;
 WHEEL_RF : ttk.Button;
 WHEEL_RB : ttk.Button;
-
-# AC Control UI Variables
 AC_CONTAINER : ttk.Frame;
 AC_ON_OFF_BTN : ttk.Button;
 AC_TEMP_DOWN_BTN : ttk.Button;
 AC_TEMP_UP_BTN : ttk.Button;
 AC_STATE : bool = False;
+DARK_MODE :bool = False;
+
+
+STYLE.configure('TNotebook.Tab', font=('Arial', 12, 'bold'));
+STYLE.configure('Wheel.TButton', font=('Arial', 12, 'bold'));
+STYLE.configure('S.TButton', background='#4a4a4a', foreground='white', font=('Arial', 12, 'bold'));
+STYLE.map('S.TButton', background=[('active', '#5a5a5a')]);
+STYLE.configure('D.TButton', background='#ff6b6b', foreground='white', font=('Arial', 12, 'bold'));
+STYLE.map('D.TButton', background=[('active', '#ff5252')]);
+STYLE.configure('W.TButton', background='#fffacd', foreground='black', font=('Arial', 12, 'bold'));
+STYLE.map('W.TButton', background=[('active', '#fff59d')]);
+
+
 
 NO_HARDWARE = True;
 
-def TOGGLE_AC():
-    global AC_STATE
-    AC_STATE = not AC_STATE
-    if AC_STATE:
-        AC_ON_OFF_BTN.config(text="AC: ON")
-        print("AC Turned ON")
-    else:
-        AC_ON_OFF_BTN.config(text="AC: OFF")
-        print("AC Turned OFF")
+
+PYTHON_FILE_DIRECTORY = Path(__file__).parent;
+AUDIO_FILES_DIRECTORY = PYTHON_FILE_DIRECTORY / 'SONGS';
+
+
+SONG_ARRAY :list[str] = [];
+CURRENT_SOUND : pygame.mixer.Sound;
+SONG_IS_PLAYING :bool = False;
+
+
+
+# ================== [TKINTER BS] ==================
+#
 
 def TOGGLE_DARKMODE():
     global DARK_MODE
@@ -113,126 +108,263 @@ def TOGGLE_DARKMODE():
         STYLE.configure('TNotebook.Tab', font=('Arial', 12, 'bold'))
         STYLE.configure('TNotebook', background='#f0f0f0')
 
-def INIT_TK():
-    global NOTEBOOK, CAR_TAB, MUSIC_TAB, MUSIC_LABEL, WHEEL_CONTAINER, WHEEL_LF, WHEEL_LB, WHEEL_RF, WHEEL_RB
-    global AC_CONTAINER, AC_ON_OFF_BTN, AC_TEMP_DOWN_BTN, AC_TEMP_UP_BTN
 
-    NOTEBOOK = ttk.Notebook(ROOT)
-    NOTEBOOK.pack(expand=True, fill="both")
 
-    # Tabs
-    CAR_TAB = ttk.Frame(NOTEBOOK)
-    MUSIC_TAB = ttk.Frame(NOTEBOOK)
 
-    NOTEBOOK.add(CAR_TAB, text="CAR")
-    NOTEBOOK.add(MUSIC_TAB, text="MUSIC")
+def INIT_AND_RUN_TK():
+        global NOTEBOOK, CAR_TAB, MUSIC_TAB, MUSIC_LABEL, WHEEL_CONTAINER, WHEEL_LF, WHEEL_LB, WHEEL_RF, WHEEL_RB
+        global AC_CONTAINER, AC_ON_OFF_BTN, AC_TEMP_DOWN_BTN, AC_TEMP_UP_BTN
 
-    # Configure main tab grid split: Left half (col 0) & Right half (col 1)
-    CAR_TAB.grid_columnconfigure(0, weight=1, uniform="half")
-    CAR_TAB.grid_columnconfigure(1, weight=1, uniform="half")
-    CAR_TAB.grid_rowconfigure(0, weight=1)
-    CAR_TAB.grid_rowconfigure(1, weight=1)
+        NOTEBOOK = ttk.Notebook(ROOT)
+        NOTEBOOK.pack(expand=True, fill="both")
 
-    # --- Screen 1: Left Half (Wheel Control) ---
-    WHEEL_CONTAINER = ttk.Frame(CAR_TAB)
-    WHEEL_CONTAINER.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=20, pady=20)
+        # Tabs
+        CAR_TAB = ttk.Frame(NOTEBOOK)
+        MUSIC_TAB = ttk.Frame(NOTEBOOK)
 
-    WHEEL_CONTAINER.grid_rowconfigure(0, weight=1)
-    WHEEL_CONTAINER.grid_rowconfigure(1, weight=1)
-    WHEEL_CONTAINER.grid_columnconfigure(0, weight=1)
-    WHEEL_CONTAINER.grid_columnconfigure(1, weight=1)
+        NOTEBOOK.add(CAR_TAB, text="CAR")
+        NOTEBOOK.add(MUSIC_TAB, text="MUSIC")
 
-    WHEEL_LF = ttk.Button(WHEEL_CONTAINER, text="LF", command=lambda: print("LF clicked"))
-    WHEEL_LF.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        # Configure main tab grid split: Left half (col 0) & Right half (col 1)
+        CAR_TAB.grid_columnconfigure(0, weight=1, uniform="half")
+        CAR_TAB.grid_columnconfigure(1, weight=1, uniform="half")
+        CAR_TAB.grid_rowconfigure(0, weight=1)
+        CAR_TAB.grid_rowconfigure(1, weight=1)
 
-    WHEEL_RF = ttk.Button(WHEEL_CONTAINER, text="RF", command=lambda: print("RF clicked"))
-    WHEEL_RF.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        # --- Screen 1: Left Half (Wheel Control) ---
+        WHEEL_CONTAINER = ttk.Frame(CAR_TAB)
+        WHEEL_CONTAINER.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=20, pady=20)
 
-    WHEEL_LB = ttk.Button(WHEEL_CONTAINER, text="LB", command=lambda: print("LB clicked"))
-    WHEEL_LB.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+        WHEEL_CONTAINER.grid_rowconfigure(0, weight=1)
+        WHEEL_CONTAINER.grid_rowconfigure(1, weight=1)
+        WHEEL_CONTAINER.grid_columnconfigure(0, weight=1)
+        WHEEL_CONTAINER.grid_columnconfigure(1, weight=1)
 
-    WHEEL_RB = ttk.Button(WHEEL_CONTAINER, text="RB", command=lambda: print("RB clicked"))
-    WHEEL_RB.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+        WHEEL_LF = ttk.Button(WHEEL_CONTAINER, text="LF", command=lambda: print("LF clicked"))
+        WHEEL_LF.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
-    # --- Screen 2: Top Right (Empty Frame) ---
-    EMPTY_CONTAINER = ttk.Frame(CAR_TAB)
-    EMPTY_CONTAINER.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        WHEEL_RF = ttk.Button(WHEEL_CONTAINER, text="RF", command=lambda: print("RF clicked"))
+        WHEEL_RF.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
-    # --- Screen 3: Bottom Right (AC Control) ---
-    AC_CONTAINER = ttk.Frame(CAR_TAB)
-    AC_CONTAINER.grid(row=1, column=1, sticky="nsew", padx=20, pady=20)
+        WHEEL_LB = ttk.Button(WHEEL_CONTAINER, text="LB", command=lambda: print("LB clicked"))
+        WHEEL_LB.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
-    AC_CONTAINER.grid_rowconfigure(0, weight=1)
-    AC_CONTAINER.grid_rowconfigure(1, weight=1)
-    AC_CONTAINER.grid_columnconfigure(0, weight=1)
-    AC_CONTAINER.grid_columnconfigure(1, weight=1)
+        WHEEL_RB = ttk.Button(WHEEL_CONTAINER, text="RB", command=lambda: print("RB clicked"))
+        WHEEL_RB.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
-    AC_TEMP_DOWN_BTN = ttk.Button(AC_CONTAINER, text="◄ L", command=lambda: print("Temperature Decreased"))
-    AC_TEMP_DOWN_BTN.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        # --- Screen 2: Top Right (Empty Frame) ---
+        EMPTY_CONTAINER = ttk.Frame(CAR_TAB)
+        EMPTY_CONTAINER.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
 
-    AC_TEMP_UP_BTN = ttk.Button(AC_CONTAINER, text="H ►", command=lambda: print("Temperature Increased"))
-    AC_TEMP_UP_BTN.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        # --- Screen 3: Bottom Right (AC Control) ---
+        AC_CONTAINER = ttk.Frame(CAR_TAB)
+        AC_CONTAINER.grid(row=1, column=1, sticky="nsew", padx=20, pady=20)
 
-    AC_ON_OFF_BTN = ttk.Button(AC_CONTAINER, text="AC: OFF", command=TOGGLE_AC)
-    AC_ON_OFF_BTN.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+        AC_CONTAINER.grid_rowconfigure(0, weight=1)
+        AC_CONTAINER.grid_rowconfigure(1, weight=1)
+        AC_CONTAINER.grid_columnconfigure(0, weight=1)
+        AC_CONTAINER.grid_columnconfigure(1, weight=1)
 
-    # --- MUSIC Tab Content ---
-    MUSIC_LABEL = ttk.Label(MUSIC_TAB, text="Music Preferences", font=("Arial", 16))
-    MUSIC_LABEL.pack(padx=20, pady=30)
+        AC_TEMP_DOWN_BTN = ttk.Button(AC_CONTAINER, text="◄ L", command=lambda: print("Temperature Decreased"))
+        AC_TEMP_DOWN_BTN.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
-    TOGGLE_DARKMODE()
+        AC_TEMP_UP_BTN = ttk.Button(AC_CONTAINER, text="H ►", command=lambda: print("Temperature Increased"))
+        AC_TEMP_UP_BTN.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
-    INIT__DISTANCE_RECIVER()
+        AC_ON_OFF_BTN = ttk.Button(AC_CONTAINER, text="AC: OFF", command=TOGGLE_AC)
+        AC_ON_OFF_BTN.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
 
-    ROOT.after(100, UPDATE__DISTANCE_BUTTONS)
+        # --- MUSIC Tab Content ---
+        MUSIC_LABEL = ttk.Label(MUSIC_TAB, text="Music Preferences", font=("Arial", 16))
+        MUSIC_LABEL.pack(padx=20, pady=30)
 
-    ROOT.mainloop()
+        TOGGLE_DARKMODE()
+
+        INIT__DISTANCE_RECIVER()
+
+        ROOT.mainloop()
+
+#
+# ====================================================
+
+
+
+
+def INIT_EVERYTHING():
+
+        global SONG_ARRAY, ROOT;
+
+
+        subprocess.run("clear", check=False);
+
+
+        INIT__DISTANCE_RECIVER();
+
+
+        INIT_MIXER_AND_SONG_LIST();
+
+
+        INIT_AND_RUN_TK();
+
+
+
+
+def TOGGLE_AC():
+
+        global AC_STATE;
+
+
+        AC_STATE = not AC_STATE;
+
+
+        if AC_STATE:
+
+                AC_ON_OFF_BTN.config(text="AC: ON");
+
+                print("AC Turned ON");
+
+        else:
+
+                AC_ON_OFF_BTN.config(text="AC: OFF");
+
+                print("AC Turned OFF");
+
+
+
 
 def INIT__DISTANCE_RECIVER():
-    global SERIAL
-    QUEUE = queue.Queue()
 
-    if (not NO_HARDWARE):
-        SERIAL = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+        global SERIAL;
+
+        QUEUE = queue.Queue();
+
+        if (not NO_HARDWARE) : SERIAL = serial.Serial('/dev/ttyUSB0', 9600, timeout=1);
+
+        ROOT.after(100, UPDATE__DISTANCE_BUTTONS);
+
+
+
 
 def GET__DISTANCE_SERIAL_LINE() -> str:
-    global SERIAL
-    LINE = ""
 
-    if (NO_HARDWARE):
-        ALLOWED_DISTANCES = ['S', 'W', 'D']
-        for _ in range(4):
-            LINE += random.choice(ALLOWED_DISTANCES)
-    else:
-        while SERIAL.in_waiting <= 0:
-            pass
-        LINE = SERIAL.readline().decode('utf-8').rstrip()
+        global SERIAL;
 
-    print(LINE)
-    return LINE
+
+        LINE = "";
+
+
+        if (NO_HARDWARE):
+
+                ALLOWED_DISTANCES = ['S', 'W', 'D'];
+
+
+                for _ in range(4): LINE += random.choice(ALLOWED_DISTANCES);
+
+        else:
+
+                while SERIAL.in_waiting <= 0:
+
+                        pass;
+
+                LINE = SERIAL.readline().decode('utf-8').rstrip()
+
+
+        return LINE;
+
+
+
 
 def UPDATE__DISTANCE_BUTTONS():
-    SERIAL_LINE = GET__DISTANCE_SERIAL_LINE()
-    print(SERIAL_LINE)
 
-    UPDATE_BUTTON_COLOR(WHEEL_LF, SERIAL_LINE[0])
-    UPDATE_BUTTON_COLOR(WHEEL_RF, SERIAL_LINE[3])
-    UPDATE_BUTTON_COLOR(WHEEL_LB, SERIAL_LINE[1])
-    UPDATE_BUTTON_COLOR(WHEEL_RB, SERIAL_LINE[2])
+        SERIAL_LINE = GET__DISTANCE_SERIAL_LINE();
 
-    WHEEL_LF.config(text=SERIAL_LINE[0])
-    WHEEL_RF.config(text=SERIAL_LINE[3])
-    WHEEL_LB.config(text=SERIAL_LINE[1])
-    WHEEL_RB.config(text=SERIAL_LINE[2])
 
-    ROOT.after(10, UPDATE__DISTANCE_BUTTONS)
+        UPDATE_BUTTON_COLOR(WHEEL_LF, SERIAL_LINE[0]);
+        UPDATE_BUTTON_COLOR(WHEEL_RF, SERIAL_LINE[3]);
+        UPDATE_BUTTON_COLOR(WHEEL_LB, SERIAL_LINE[1]);
+        UPDATE_BUTTON_COLOR(WHEEL_RB, SERIAL_LINE[2]);
+
+
+        WHEEL_LF.config(text=SERIAL_LINE[0]);
+        WHEEL_RF.config(text=SERIAL_LINE[3]);
+        WHEEL_LB.config(text=SERIAL_LINE[1]);
+        WHEEL_RB.config(text=SERIAL_LINE[2]);
+
+
+        ROOT.after(10, UPDATE__DISTANCE_BUTTONS);
+
+
+
 
 def UPDATE_BUTTON_COLOR(button, char):
-    if char == 'S':
-        button.configure(style='S.TButton')  # Dark gray
-    elif char == 'W':
-        button.configure(style='W.TButton')  # Light yellow
-    elif char == 'D':
-        button.configure(style='D.TButton')  # Light red
 
-INIT_TK()
+        if   char == 'S' : button.configure(style='S.TButton');  # Dark gray
+
+        elif char == 'W' : button.configure(style='W.TButton');  # Light yellow
+
+        elif char == 'D' : button.configure(style='D.TButton');  # Light red
+
+
+
+
+def INIT_MIXER_AND_SONG_LIST():
+
+        global SONG_ARRAY;
+
+
+        pygame.mixer.init()
+
+
+        AUDIO_EXTENSIONS = ('.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a');
+
+
+        SONG_ARRAY = [
+                FILE for FILE in os.listdir(AUDIO_FILES_DIRECTORY)
+
+                if FILE.lower().endswith(AUDIO_EXTENSIONS) and os.path.isfile(os.path.join(AUDIO_FILES_DIRECTORY, FILE))
+        ];
+
+
+        print("FOUND_SONGS : [");
+
+        for FILE in SONG_ARRAY : print("    \"" + FILE + "\",");
+
+        print("]");
+
+
+
+
+def PLAY_SONG_INDEX(INDEX :int):
+
+        global SONG_ARRAY;
+
+
+        if (INDEX >= len(SONG_ARRAY) or INDEX < 0):
+
+                LOG_ERROR("FAILED TO PLAY SONG : INVALID SONG INDEX");
+
+                return;
+
+
+        CURRENT_SOUND = pygame.mixer.Sound(PYTHON_FILE_DIRECTORY / "SONGS" / SONG_ARRAY[INDEX]);
+
+
+        CURRENT_SOUND.play();
+
+
+
+
+
+def LOG_ERROR(STRING) :
+
+
+        CURRENT_TIME = datetime.now(timezone(timedelta(hours=8))).strftime("%H:%M:%S");
+
+
+        print("\033[31m[ERROR] : [" + CURRENT_TIME + "] : " + STRING + "\033[0m");
+
+
+
+
+
+INIT_EVERYTHING();

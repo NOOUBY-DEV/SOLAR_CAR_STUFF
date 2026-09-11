@@ -1,5 +1,7 @@
 
 
+.DEFAULT_GOAL := RUN_REGULAR
 
-control:
-	python3 CONTROL_UI/CONTROL_UI.py
+
+RUN_REGULAR:
+	python3 -W ignore CONTROL_UI/CONTROL_UI.py
