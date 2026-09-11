@@ -58,6 +58,10 @@ WHEEL_RF : ttk.Button;
 WHEEL_RB : ttk.Button;
 
 
+NO_HARDWARE = True;
+
+
+
 
 def TOGGLE_DARKMODE():
 
@@ -183,7 +187,8 @@ def INIT__DISTANCE_RECIVER():
         QUEUE = queue.Queue();
 
 
-        SERIAL = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+        if (not NO_HARDWARE) :
+                SERIAL = serial.Serial('/dev/ttyUSB0', 9600, timeout=1);
 
 
 
@@ -196,20 +201,24 @@ def GET__DISTANCE_SERIAL_LINE() -> str:
         LINE = "";
 
 
-        # ALLOWED_DISTANCES = ['S', 'W', 'D'];
+        if (NO_HARDWARE) :
+
+                ALLOWED_DISTANCES = ['S', 'W', 'D'];
 
 
-        # for _ in range(4):
+                for _ in range(4):
 
-        #         LINE += random.choice(ALLOWED_DISTANCES);
+                        LINE += random.choice(ALLOWED_DISTANCES);
 
-
-        while SERIAL.in_waiting <= 0:
-
-                pass
+        else :
 
 
-        LINE = SERIAL.readline().decode('utf-8').rstrip()
+                while SERIAL.in_waiting <= 0:
+
+                        pass
+
+
+                LINE = SERIAL.readline().decode('utf-8').rstrip()
 
 
         print(LINE)
