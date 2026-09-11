@@ -56,7 +56,9 @@ AUDIO_FILES_DIRECTORY = PYTHON_FILE_DIRECTORY / 'SONGS';
 
 
 SONG_ARRAY :list[str] = [];
-CURRENT_SOUND : pygame.mixer.Sound;
+SONG_SOUND : pygame.mixer.Sound;
+SONG_CHANNEL : pygame.mixer.Channel;
+CURRENT_SONG_INDEX :int = 0;
 SONG_IS_PLAYING :bool = False;
 
 
@@ -309,10 +311,13 @@ def UPDATE_BUTTON_COLOR(button, char):
 
 def INIT_MIXER_AND_SONG_LIST():
 
-        global SONG_ARRAY;
+        global SONG_ARRAY, SONG_CHANNEL;
 
 
         pygame.mixer.init()
+
+
+        SONG_CHANNEL = pygame.mixer.Channel(0);
 
 
         AUDIO_EXTENSIONS = ('.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a');
@@ -334,23 +339,70 @@ def INIT_MIXER_AND_SONG_LIST():
 
 
 
-def PLAY_SONG_INDEX(INDEX :int):
+def PLAY_SONG_INDEX(GIVEN_INDEX :int):
 
-        global SONG_ARRAY;
+        global SONG_ARRAY, CURRENT_SONG_INDEX, SONG_IS_PLAYING;
 
 
-        if (INDEX >= len(SONG_ARRAY) or INDEX < 0):
+        if (GIVEN_INDEX >= len(SONG_ARRAY) or GIVEN_INDEX < 0):
 
                 LOG_ERROR("FAILED TO PLAY SONG : INVALID SONG INDEX");
 
                 return;
 
 
-        CURRENT_SOUND = pygame.mixer.Sound(PYTHON_FILE_DIRECTORY / "SONGS" / SONG_ARRAY[INDEX]);
+        SONG_IS_PLAYING = True;
 
 
-        CURRENT_SOUND.play();
+        CURRENT_SONG_INDEX = GIVEN_INDEX;
 
+
+        CURRENT_SOUND = pygame.mixer.Sound(PYTHON_FILE_DIRECTORY / "SONGS" / SONG_ARRAY[GIVEN_INDEX]);
+
+
+        SONG_CHANNEL.play(CURRENT_SOUND);
+
+
+
+
+def PLAY_NEXT_SONG():
+
+
+        if (CURRENT_SONG_INDEX >= len(SONG_ARRAY) - 1) :
+
+                return;
+
+
+        PLAY_SONG_INDEX(CURRENT_SONG_INDEX + 1);
+
+
+
+
+def PLAY_PREV_SONG():
+
+
+        if (CURRENT_SONG_INDEX == 0) :
+
+                return;
+
+
+        PLAY_SONG_INDEX(CURRENT_SONG_INDEX + 1);
+
+
+
+
+
+def PAUSE_OR_UNPAUSE_SONG():
+
+        global SONG_IS_PLAYING;
+
+
+        if (SONG_IS_PLAYING) : SONG_CHANNEL.pause();
+
+        else : SONG_CHANNEL.unpause();
+
+
+        SONG_IS_PLAYING = not SONG_IS_PLAYING;
 
 
 
