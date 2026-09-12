@@ -23,7 +23,6 @@ QUEUE :queue.Queue;
 NOTEBOOK : ttk.Notebook;
 CAR_TAB : ttk.Frame;
 MUSIC_TAB : ttk.Frame;
-MUSIC_LABEL : ttk.Label;
 WHEEL_CONTAINER :ttk.Frame;
 WHEEL_LF : ttk.Button;
 WHEEL_LB : ttk.Button;
@@ -35,6 +34,15 @@ AC_TEMP_DOWN_BTN : ttk.Button;
 AC_TEMP_UP_BTN : ttk.Button;
 AC_STATE : bool = False;
 DARK_MODE :bool = False;
+
+# MUSIC TAB WIDGET VARIABLES
+MUSIC_LEFT_CONTAINER : ttk.Frame;
+MUSIC_TOP_RIGHT_CONTAINER : ttk.Frame;
+MUSIC_BOTTOM_RIGHT_CONTAINER : ttk.Frame;
+CURRENT_SONG_BTN : ttk.Button;
+PLAY_PAUSE_BTN : ttk.Button;
+VOL_DOWN_BTN : ttk.Button;
+VOL_UP_BTN : ttk.Button;
 
 
 STYLE.configure('TNotebook.Tab', font=('Arial', 12, 'bold'));
@@ -53,6 +61,7 @@ NO_HARDWARE = True;
 
 PYTHON_FILE_DIRECTORY = Path(__file__).parent;
 AUDIO_FILES_DIRECTORY = PYTHON_FILE_DIRECTORY / 'SONGS';
+AUDIO_EXTENSIONS = ('.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a');
 
 
 SONG_ARRAY :list[str] = [];
@@ -80,9 +89,6 @@ def TOGGLE_DARKMODE():
         STYLE.configure('Dark.TNotebook.Tab', background='#2d2d2d', foreground='white', font=('Arial', 12, 'bold'))
         STYLE.map('Dark.TNotebook.Tab', background=[('selected', '#3d3d3d')])
 
-        MUSIC_LABEL.configure(style='Dark.TLabel', foreground='white')
-        STYLE.configure('Dark.TLabel', background='#1a1a1a', foreground='white', font=('Arial', 16))
-
         WHEEL_LF.configure(style='Dark.TButton')
         WHEEL_RF.configure(style='Dark.TButton')
         WHEEL_LB.configure(style='Dark.TButton')
@@ -96,9 +102,6 @@ def TOGGLE_DARKMODE():
         ROOT.configure(bg='#f0f0f0')
         CAR_TAB.configure(style='TFrame')
         MUSIC_TAB.configure(style='TFrame')
-
-        MUSIC_LABEL.configure(style='TLabel', foreground='black')
-        STYLE.configure('TLabel', background='#f0f0f0', foreground='black', font=('Arial', 16))
 
         WHEEL_LF.configure(style='TButton')
         WHEEL_RF.configure(style='TButton')
@@ -114,8 +117,10 @@ def TOGGLE_DARKMODE():
 
 
 def INIT_AND_RUN_TK():
-        global NOTEBOOK, CAR_TAB, MUSIC_TAB, MUSIC_LABEL, WHEEL_CONTAINER, WHEEL_LF, WHEEL_LB, WHEEL_RF, WHEEL_RB
+        global NOTEBOOK, CAR_TAB, MUSIC_TAB, WHEEL_CONTAINER, WHEEL_LF, WHEEL_LB, WHEEL_RF, WHEEL_RB
         global AC_CONTAINER, AC_ON_OFF_BTN, AC_TEMP_DOWN_BTN, AC_TEMP_UP_BTN
+        global MUSIC_LEFT_CONTAINER, MUSIC_TOP_RIGHT_CONTAINER, MUSIC_BOTTOM_RIGHT_CONTAINER
+        global CURRENT_SONG_BTN, PLAY_PAUSE_BTN, VOL_DOWN_BTN, VOL_UP_BTN
 
         NOTEBOOK = ttk.Notebook(ROOT)
         NOTEBOOK.pack(expand=True, fill="both")
@@ -177,12 +182,52 @@ def INIT_AND_RUN_TK():
         AC_ON_OFF_BTN.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
 
         # --- MUSIC Tab Content ---
-        MUSIC_LABEL = ttk.Label(MUSIC_TAB, text="Music Preferences", font=("Arial", 16))
-        MUSIC_LABEL.pack(padx=20, pady=30)
+        MUSIC_TAB.grid_columnconfigure(0, weight=1, uniform="half")
+        MUSIC_TAB.grid_columnconfigure(1, weight=1, uniform="half")
+        MUSIC_TAB.grid_rowconfigure(0, weight=1)
+        MUSIC_TAB.grid_rowconfigure(1, weight=1)
+
+        # MUSIC Screen 1: Left Half (Clickable Song List)
+        MUSIC_LEFT_CONTAINER = ttk.Frame(MUSIC_TAB)
+        MUSIC_LEFT_CONTAINER.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=20, pady=20)
+        MUSIC_LEFT_CONTAINER.grid_columnconfigure(0, weight=1)
+
+        for INDEX, SONG_NAME in enumerate(SONG_ARRAY):
+                MUSIC_LEFT_CONTAINER.grid_rowconfigure(INDEX, weight=1)
+                SONG_BTN = ttk.Button(MUSIC_LEFT_CONTAINER, text=SONG_NAME, command=lambda IDX=INDEX: PLAY_SONG_INDEX(IDX))
+                SONG_BTN.grid(row=INDEX, column=0, padx=10, pady=5, sticky="nsew")
+
+        # MUSIC Screen 2: Top Right (Currently Playing Song Display)
+        MUSIC_TOP_RIGHT_CONTAINER = ttk.Frame(MUSIC_TAB)
+        MUSIC_TOP_RIGHT_CONTAINER.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        MUSIC_TOP_RIGHT_CONTAINER.grid_rowconfigure(0, weight=1)
+        MUSIC_TOP_RIGHT_CONTAINER.grid_columnconfigure(0, weight=1)
+
+        CURRENT_SONG_NAME = SONG_ARRAY[CURRENT_SONG_INDEX] if SONG_ARRAY else "No Songs"
+        CURRENT_SONG_BTN = ttk.Button(MUSIC_TOP_RIGHT_CONTAINER, text=CURRENT_SONG_NAME)
+        CURRENT_SONG_BTN.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        # MUSIC Screen 3: Bottom Right (Controls: Track Arrows + Play/Stop Wide Button)
+        MUSIC_BOTTOM_RIGHT_CONTAINER = ttk.Frame(MUSIC_TAB)
+        MUSIC_BOTTOM_RIGHT_CONTAINER.grid(row=1, column=1, sticky="nsew", padx=20, pady=20)
+
+        MUSIC_BOTTOM_RIGHT_CONTAINER.grid_rowconfigure(0, weight=1)
+        MUSIC_BOTTOM_RIGHT_CONTAINER.grid_rowconfigure(1, weight=1)
+        MUSIC_BOTTOM_RIGHT_CONTAINER.grid_columnconfigure(0, weight=1)
+        MUSIC_BOTTOM_RIGHT_CONTAINER.grid_columnconfigure(1, weight=1)
+
+        VOL_DOWN_BTN = ttk.Button(MUSIC_BOTTOM_RIGHT_CONTAINER, text="◄ PREV", command=PLAY_PREV_SONG)
+        VOL_DOWN_BTN.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        VOL_UP_BTN = ttk.Button(MUSIC_BOTTOM_RIGHT_CONTAINER, text="NEXT ►", command=PLAY_NEXT_SONG)
+        VOL_UP_BTN.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+
+        PLAY_PAUSE_BTN = ttk.Button(MUSIC_BOTTOM_RIGHT_CONTAINER, text="PLAY / STOP", command=PAUSE_OR_UNPAUSE_SONG)
+        PLAY_PAUSE_BTN.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+
+        CURRENT_SONG_BTN.config(text="");
 
         TOGGLE_DARKMODE()
-
-        INIT__DISTANCE_RECIVER()
 
         ROOT.mainloop()
 
@@ -320,9 +365,6 @@ def INIT_MIXER_AND_SONG_LIST():
         SONG_CHANNEL = pygame.mixer.Channel(0);
 
 
-        AUDIO_EXTENSIONS = ('.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a');
-
-
         SONG_ARRAY = [
                 FILE for FILE in os.listdir(AUDIO_FILES_DIRECTORY)
 
@@ -341,7 +383,7 @@ def INIT_MIXER_AND_SONG_LIST():
 
 def PLAY_SONG_INDEX(GIVEN_INDEX :int):
 
-        global SONG_ARRAY, CURRENT_SONG_INDEX, SONG_IS_PLAYING;
+        global SONG_ARRAY, CURRENT_SONG_INDEX, SONG_IS_PLAYING, CURRENT_SONG_BTN;
 
 
         if (GIVEN_INDEX >= len(SONG_ARRAY) or GIVEN_INDEX < 0):
@@ -361,6 +403,17 @@ def PLAY_SONG_INDEX(GIVEN_INDEX :int):
 
 
         SONG_CHANNEL.play(CURRENT_SOUND);
+
+
+        CURRENT_SONG_NAME = SONG_ARRAY[GIVEN_INDEX];
+
+
+        for EXTENSION in AUDIO_EXTENSIONS:
+
+                CURRENT_SONG_NAME = CURRENT_SONG_NAME.removesuffix(EXTENSION);
+
+
+        CURRENT_SONG_BTN.config(text=CURRENT_SONG_NAME);
 
 
 
@@ -386,7 +439,7 @@ def PLAY_PREV_SONG():
                 return;
 
 
-        PLAY_SONG_INDEX(CURRENT_SONG_INDEX + 1);
+        PLAY_SONG_INDEX(CURRENT_SONG_INDEX - 1);
 
 
 
