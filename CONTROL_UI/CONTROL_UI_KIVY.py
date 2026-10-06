@@ -77,7 +77,7 @@ class ControlUI(App):
     def build(self):
         # Fullscreen on Pi
         Window.fullscreen = "auto"
-        Window.show_cursor = False          # optional – nicer on touchscreen
+        Window.show_cursor = True
 
         self.song_array = []
         self.song_channel = None
