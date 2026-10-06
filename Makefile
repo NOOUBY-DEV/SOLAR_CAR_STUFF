@@ -5,3 +5,7 @@
 
 RUN_REGULAR:
 	python3 -W ignore CONTROL_UI/CONTROL_UI.py
+
+kivy:
+	python3 -W ignore CONTROL_UI/CONTROL_UI_KIVY.py
+

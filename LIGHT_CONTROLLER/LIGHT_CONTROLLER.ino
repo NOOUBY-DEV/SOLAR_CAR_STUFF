@@ -40,6 +40,12 @@
 #define BLINK_TIME_MS 500
 
 
+
+#define TRIG_PIN 13
+#define ECHO_PIN 12
+
+
+
 typedef struct
 {
 
@@ -77,6 +83,9 @@ char JOYSTICK_IS_LOCKED = FALSE;
 char TAILLIGHT_USED = FALSE;
 
 
+int BREAK = FALSE;
+
+
 
 void setup()
 {
@@ -90,6 +99,11 @@ void setup()
   INIT_LIGHTS();
 
 
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+
+  xTaskCreate(SET_BREAK_DISTANCE_LOOP, "SET_BREAK_DISTANCE_LOOP", 128, NULL, 1, NULL);
   xTaskCreate(BREAK_LOOP, "BREAK_LOOP", 32, NULL, 1, NULL);
   xTaskCreate(INPUT_LOOP, "INPUT_LOOP", 128, NULL, 1, NULL);
 
@@ -165,6 +179,32 @@ void SET_HEADLIGHT_COLOR(const unsigned char R_VALUED, const unsigned char G_VAL
 
     LF_LIGHT.show();
     RF_LIGHT.show();
+
+  }
+
+}
+
+
+void SET_BREAK_DISTANCE_LOOP(void* ARG)
+{
+
+  while (TRUE)
+  {
+
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, HIGH);
+
+
+    long DISTANCE = pulseIn(ECHO_PIN, HIGH, 3000) * 0.017;
+
+
+    BREAK = (DISTANCE > 0 && DISTANCE <= 4);
+
+
+    YEILD_DELAY();
 
   }
 
@@ -455,13 +495,10 @@ void BREAK_LOOP(void* ARG)
   #define CRASH_SENSOR_STATUS digitalRead(CRASH_SENSOR_PIN)
 
 
-  pinMode(CRASH_SENSOR_PIN, INPUT_PULLUP);
-
-
   while (TRUE)
   {
 
-    if (CRASH_SENSOR_STATUS == LOW)
+    if (BREAK)
     {
 
       SET_TAILLIGHT_COLOR(255, 0, 0);

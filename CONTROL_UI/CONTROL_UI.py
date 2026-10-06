@@ -366,6 +366,7 @@ def INIT_MIXER_AND_SONG_LIST():
 
 
         SONG_ARRAY = [
+
                 FILE for FILE in os.listdir(AUDIO_FILES_DIRECTORY)
 
                 if FILE.lower().endswith(AUDIO_EXTENSIONS) and os.path.isfile(os.path.join(AUDIO_FILES_DIRECTORY, FILE))
