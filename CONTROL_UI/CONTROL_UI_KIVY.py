@@ -7,6 +7,7 @@ CONTROL_UI ported to Kivy for Raspberry Pi 4
 
 import os
 import random
+import struct
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -27,8 +28,8 @@ from kivy.metrics import dp
 
 
 # ================== CONFIG ==================
-NO_HARDWARE = True                                          # set False when real Arduino is connected
-SERIAL_PORT = "/dev/ttyUSB0"
+NO_HARDWARE = False                                          # set False when real Arduino is connected
+SERIAL_PORT = "/dev/ttyACM0"
 BAUD = 9600
 UPDATE_INTERVAL = 0.05                                 # 50 ms – much kinder than 10 ms
 AUDIO_EXTENSIONS = (".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a")
@@ -69,6 +70,9 @@ class ControlUI(App):
         current_song_index = NumericProperty(0)
 
         # distance button texts
+        distances :str = "SSSS";
+        battery_temperature :float = 0;
+
         lf_text = StringProperty("S")
         rf_text = StringProperty("S")
         lb_text = StringProperty("S")
@@ -76,7 +80,7 @@ class ControlUI(App):
 
         def build(self):
                 # Fullscreen on Pi
-                Window.fullscreen = "auto"
+                Window.fullscreen = False
                 Window.show_cursor = True
 
                 self.song_array = []
@@ -163,31 +167,56 @@ class ControlUI(App):
                                 log_error(f"Serial open failed: {e}")
                                 self.serial = None
 
-        def _get_distance_line(self) -> str:
+        def _get_distance_data(self):
                 if NO_HARDWARE or self.serial is None:
                         allowed = ["S", "W", "D"]
-                        return "".join(random.choice(allowed) for _ in range(4))
+                        return
 
                 try:
-                        if self.serial.in_waiting > 0:
-                                line = self.serial.readline().decode("utf-8", errors="ignore").rstrip()
-                                if len(line) >= 4:
-                                        return line[:4]
+                        # 1. Check if there is data to process, but don't blindly read 24 bytes
+                        if self.serial.in_waiting <= 0:
+                                return
+
+                        correct_header = b'NOOUBY'
+
+                        full_buffer = self.serial.read(30);
+
+                        read_header = full_buffer[:6];
+
+                        while (read_header != correct_header):
+
+                                full_buffer = self.serial.read(30);
+
+                                read_header = full_buffer[:6];
+
+                        data_buffer = full_buffer[6:];
+
+                        raw_distances, self.battery_temperature = struct.unpack('<4sf16x', data_buffer)
+
+                        self.distances = raw_distances.decode('utf-8')
+
+                        print(self.distances)
+
                 except Exception as e:
                         log_error(f"Serial read error: {e}")
-                return "SSSS"
+
 
         def update_distance_buttons(self, dt):
-                line = self._get_distance_line()
+                self._get_distance_data()
                 # only update properties that actually changed
-                if self.lf_text != line[0]:
-                        self.lf_text = line[0]
-                if self.lb_text != line[1]:
-                        self.lb_text = line[1]
-                if self.rb_text != line[2]:
-                        self.rb_text = line[2]
-                if self.rf_text != line[3]:
-                        self.rf_text = line[3]
+                self.lf_text = self.distances[0]
+                self.rf_text = self.distances[1]
+                self.lb_text = self.distances[2]
+                self.rb_text = self.distances[3]
+                # if self.lf_text != self.distances[0]:
+                #         self.lf_text = self.distances[0]
+                # if self.lb_text != self.distances[1]:
+                #         self.lb_text = self.distances[1]
+                # if self.rb_text != self.distances[2]:
+                #         self.rb_text = self.distances[2]
+                # if self.rf_text != self.distances[3]:
+                #         self.rf_text = self.distances[3]
+                print(self.battery_temperature);
 
         # ------------------------------------------------------------------
         # UI Construction
