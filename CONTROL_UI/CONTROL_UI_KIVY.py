@@ -65,7 +65,7 @@ class ControlUI(App):
         rb_text = StringProperty("S")
         def build(self):
                 # Fullscreen on Pi
-                Window.fullscreen = False
+                Window.fullscreen = True
                 Window.show_cursor = True
                 self.song_array = []
                 self.song_channel = None
